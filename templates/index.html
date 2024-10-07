@@ -126,6 +126,17 @@
             .catch(err => console.error("Error al copiar el texto: ", err));
     }
 
+    // Función para escapar los caracteres especiales (saltos de línea, comillas, etc.)
+    function escaparHtml(unsafe) {
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;")
+            .replace(/\n/g, "<br>");  // Convertimos saltos de línea a <br> para que se visualicen correctamente
+    }
+
     // Función para renderizar la lista de peticiones en el panel izquierdo
     function renderListaPeticiones() {
         listaPeticionesDiv.innerHTML = '';
@@ -144,11 +155,11 @@
         detallesPeticionDiv.innerHTML = `
                 <h2>Petición de ${req.client} (${req.timestamp})</h2>
                 <h3>Encabezados</h3>
-                <pre>${JSON.stringify(req.headers, null, 2)}</pre>
+                <pre>${escaparHtml(JSON.stringify(req.headers, null, 2))}</pre>
                 <h3>Cuerpo</h3>
-                <pre>${req.body}</pre>
+                <pre>${escaparHtml(req.body)}</pre>
                 <h3>JSON</h3>
-                <pre>${JSON.stringify(req.json, null, 2)}</pre>
+                <pre>${escaparHtml(JSON.stringify(req.json, null, 2))}</pre>
             `;
     }
 
