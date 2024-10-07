@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyHooker Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+        }
+
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+
+        #container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+        }
+
+        /* Panel izquierdo - Lista de peticiones */
+        #panel-izquierdo {
+            width: 30%;
+            background-color: #f1f1f1;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .peticion-lista {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+            color: #007BFF;
+            font-weight: bold;
+        }
+
+        .peticion-lista:hover {
+            background-color: #e9e9e9;
+        }
+
+        /* Panel derecho - Detalles de la petición seleccionada */
+        #panel-derecho {
+            width: 70%;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        #detalles-peticion {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        #detalles-peticion h2 {
+            margin-top: 0;
+            color: #007BFF;
+        }
+
+        #detalles-peticion h3 {
+            margin: 0.5em 0;
+            color: #555;
+        }
+
+        pre {
+            background-color: #f1f1f1;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+
+        .url {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f1f1f1;
+            border-left: 4px solid #007BFF;
+        }
+
+        .url:hover {
+            background-color: #0056b3;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+<body>
+<div id="container">
+    <!-- Panel izquierdo -->
+    <div id="panel-izquierdo">
+        <h1>PyHooker Dashboard</h1>
+        <div class="url" onclick="copiarTextoAlPortapapeles('{{ public_url }}/webhook')">
+            <strong>Tu URL de Webhook:</strong>
+            <span>{{ public_url }}/webhook</span>
+        </div>
+        <div id="lista-peticiones">
+            <!-- Lista de peticiones se inserta aquí -->
+        </div>
+    </div>
+
+    <!-- Panel derecho -->
+    <div id="panel-derecho">
+        <h1>Detalles de la Petición</h1>
+        <div id="detalles-peticion">
+            <!-- Los detalles de la petición seleccionada se mostrarán aquí -->
+            <p>Selecciona una petición de la lista para ver sus detalles.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const listaPeticionesDiv = document.getElementById('lista-peticiones');
+    const detallesPeticionDiv = document.getElementById('detalles-peticion');
+    let peticionesRecibidas = [];
+
+    // Función para copiar texto al portapapeles
+    function copiarTextoAlPortapapeles(texto) {
+        navigator.clipboard.writeText(texto)
+            .then(() => alert("Texto copiado al portapapeles"))
+            .catch(err => console.error("Error al copiar el texto: ", err));
+    }
+
+    // Función para renderizar la lista de peticiones en el panel izquierdo
+    function renderListaPeticiones() {
+        listaPeticionesDiv.innerHTML = '';
+        peticionesRecibidas.forEach((req, index) => {
+            const peticionDiv = document.createElement('div');
+            peticionDiv.className = 'peticion-lista';
+            peticionDiv.textContent = `${req.method} - ${req.client} (${new Date(req.datetime).toLocaleString()})`;
+            peticionDiv.onclick = () => mostrarDetallesPeticion(index);
+            listaPeticionesDiv.appendChild(peticionDiv);
+        });
+    }
+
+    // Función para mostrar los detalles de una petición en el panel derecho
+    function mostrarDetallesPeticion(index) {
+        const req = peticionesRecibidas[index];
+        detallesPeticionDiv.innerHTML = `
+                <h2>Petición de ${req.client} (${req.timestamp})</h2>
+                <h3>Encabezados</h3>
+                <pre>${JSON.stringify(req.headers, null, 2)}</pre>
+                <h3>Cuerpo</h3>
+                <pre>${req.body}</pre>
+                <h3>JSON</h3>
+                <pre>${JSON.stringify(req.json, null, 2)}</pre>
+            `;
+    }
+
+    // Configuración del WebSocket con protocolo adecuado
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    let socket = new WebSocket(wsUrl);
+
+    socket.onopen = function () {
+        console.log('Conectado al WebSocket');
+    };
+
+    socket.onmessage = function (event) {
+        const data = JSON.parse(event.data);
+        if (data.event === 'new_request') {
+            peticionesRecibidas.unshift(data.data);
+            renderListaPeticiones();
+        }
+    };
+
+    socket.onerror = function (error) {
+        console.error('WebSocket error:', error);
+    };
+
+    socket.onclose = function () {
+        console.log('WebSocket cerrado. Reintentando en 1 segundo...');
+        setTimeout(() => {
+            socket = new WebSocket(wsUrl);
+        }, 1000);
+    };
+
+    // Obtener peticiones iniciales
+    fetch('/api/peticiones')
+        .then(response => response.json())
+        .then(data => {
+            peticionesRecibidas = data;
+            renderListaPeticiones();
+        });
+</script>
+</body>
+</html>
