@@ -8,8 +8,11 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pyngrok import ngrok
+from starlette.staticfiles import StaticFiles
 
 app = FastAPI()
+
+app.mount("/static", StaticFiles(directory="./public/static"), name="static")
 
 # Directorio de plantillas
 templates = Jinja2Templates(directory="templates")
