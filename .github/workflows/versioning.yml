@@ -1,0 +1,39 @@
+name: Generate Version Tag
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  generate-tag:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Install Commitizen
+      run: |
+        pip install commitizen
+
+    - name: Generate Version Tag with Commitizen
+      id: tag
+      run: |
+        git fetch --tags
+        cz bump --yes
+        NEW_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
+        echo "New tag: $NEW_TAG"
+        echo "::set-output name=new_tag::$NEW_TAG"
+
+    - name: Create Git Tag
+      if: steps.tag.outputs.new_tag != ''
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git push origin ${{ steps.tag.outputs.new_tag }}
