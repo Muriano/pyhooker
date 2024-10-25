@@ -10,7 +10,9 @@ help: ## This beautiful help
 build: pip-install ## Build the application
 
 run: .venv ## Run the application
-	. .venv/bin/activate && python app.py
+	. .venv/bin/activate && \
+	pip install -r requirements.txt && \
+	python app.py
 
 .venv: ## Create a virtual environment
 	python3 -m venv .venv
